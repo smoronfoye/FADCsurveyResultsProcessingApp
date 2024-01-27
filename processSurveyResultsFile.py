@@ -85,4 +85,4 @@ if __name__ == "__main__":
     main()
 
 
-# pyinstaller --onefile --clean --upx-dir /home/seyi/upx-4.2.2-amd64_linux  --hidden-import openpyxl.cell._writer processSurveyResultsFile.py
+# pyinstaller --onefile --clean --upx-dir /home/seyi/upx-4.2.2-amd64_linux --icon logo.ico  --hidden-import openpyxl.cell._writer processSurveyResultsFile.py
