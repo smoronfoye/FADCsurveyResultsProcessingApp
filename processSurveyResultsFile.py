@@ -23,7 +23,6 @@ def processExcelFile(fileName, sheetName, latitudeColumn, longitudeColumn):
         api_url = base_url
         api_url += str(latitude) + ',' + str(longitude)
         api_url += '&key=AIzaSyBcFFE4HYe5up8W6TBMnZe4IG2FINWMf_A'
-        api_url += '&result_type=street_address'
 
         response = {}
         if latitude and longitude:
@@ -32,14 +31,20 @@ def processExcelFile(fileName, sheetName, latitudeColumn, longitudeColumn):
             if response_from_cache:
                 response = response_from_cache
             else:
-                response = requests.get(api_url)
-                response = response.json()
+                resultTypes = ['street_address', 'premise', 'establishment', 'point_of_interest', 'neighborhood']
+                for resultType in resultTypes:
+                    if len(response) == 0 or len(response['results']) == 0 :
+                        response = requests.get(api_url + '&result_type=' + resultType)
+                        response = response.json()
+                    else:
+                        break
+
                 updateLruCache(key, response)
         
 
         street_address = ''
         place_id = ''
-        if len(response['results']) > 0 :
+        if len(response) == 0 or len(response['results']) > 0 :
             street_address = response['results'][0]['formatted_address']
             place_id = response['results'][0]['place_id']
 
