@@ -84,4 +84,4 @@ def updateLruCache(key: tuple, value):
 #     main()
 
 
-# pyinstaller --onefile --clean --upx-dir /home/seyi/upx-4.2.2-amd64_linux --icon favicon.ico  --hidden-import openpyxl.cell._writer processSurveyResultsFile.py
+# pyinstaller --onefile --clean --upx-dir /home/seyi/upx-4.2.2-amd64_linux --icon favicon.ico  --hidden-import openpyxl.cell._writer user-interface.py
