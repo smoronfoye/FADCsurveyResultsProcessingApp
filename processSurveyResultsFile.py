@@ -8,18 +8,17 @@ base_url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng='
 lru_cache_map = dict()
 lru_cache_array = []
 
-def processExcelFile(fileName, sheetName):
+def processExcelFile(fileName, sheetName, latitudeColumn, longitudeColumn):
     df = pd.read_excel(fileName, sheet_name=sheetName)
-    df = df.sort_values(['Cordinate-Latitude', 'Cordinate-Longitude'], ascending=False)
-
+    df = df.sort_values([latitudeColumn, longitudeColumn], ascending=False)
 
     file_name_without_type = fileName.split('.')[0]
 
     rows_list = []
     for index, row in df.iterrows():
 
-        latitude = row['Cordinate-Latitude']
-        longitude = row['Cordinate-Longitude']
+        latitude = row[latitudeColumn]
+        longitude = row[longitudeColumn]
 
         api_url = base_url
         api_url += str(latitude) + ',' + str(longitude)
@@ -52,9 +51,9 @@ def processExcelFile(fileName, sheetName):
     processedSurveyResults = pd.DataFrame(rows_list)
     processedSurveyResults.to_csv(file_name_without_type + '_processed.csv', sep=',', encoding='utf-8')
 
-def main():
-    for file_name in glob('survey_results_*.xlsx'):
-        processExcelFile(file_name, 'Sheet1')
+# def main():
+#     for file_name in glob('survey_results_*.xlsx'):
+#         processExcelFile(file_name, 'Sheet1', 'Cordinate-Latitude', 'Cordinate-Longitude')
         
 
 def readFromLruCache(key: tuple):
@@ -81,8 +80,8 @@ def updateLruCache(key: tuple, value):
         lru_cache_map[key] = index
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
 
-# pyinstaller --onefile --clean --upx-dir /home/seyi/upx-4.2.2-amd64_linux --icon logo.ico  --hidden-import openpyxl.cell._writer processSurveyResultsFile.py
+# pyinstaller --onefile --clean --upx-dir /home/seyi/upx-4.2.2-amd64_linux --icon favicon.ico  --hidden-import openpyxl.cell._writer processSurveyResultsFile.py

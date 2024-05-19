@@ -1,17 +1,16 @@
-from PyQt5.QtWidgets import (QAction, QApplication, QFormLayout, QGroupBox,
+from PyQt5.QtWidgets import (QApplication, QFormLayout, QGroupBox,
                              QLabel, QPushButton, QVBoxLayout, QWidget,
-                             QMainWindow, QLineEdit)
+                             QMainWindow, QLineEdit, QFileDialog, QComboBox)
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap
 from processSurveyResultsFile import processExcelFile
+from openpyxl import load_workbook
+import pandas as pd
+import re
 
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.createUI()
-
-
-
 
 
     def createUI(self):
@@ -46,44 +45,111 @@ class MainWindow(QMainWindow):
 
 
     def addInputText(self):
-        groupBox = QGroupBox()
-        groupBox.setFixedWidth(550)
+        self.groupBox = QGroupBox()
+        self.groupBox.setFixedWidth(550)
 
         formLayout = QFormLayout()
 
-        excelFileNameLabel = QLabel('Excel File Name')
-        excelFileNameField = QLineEdit(self)
-        excelFileNameField.setTextMargins(3, 0, 3, 0)
-        excelFileNameField.setMinimumWidth(200)
-        excelFileNameField.setMaximumWidth(300)
-        excelFileNameField.setClearButtonEnabled(True)
+        self.excelFileNameLabel = QLabel('Excel File Name')
+        self.selectFileButton = QPushButton('Click To Select File', self)
+        self.selectFileButton.setMaximumWidth(150)
+        self.selectFileButton.clicked.connect(lambda: self.openFileNameDialog())
+
+        self.excelFileNameField = QLineEdit()
+        self.excelFileNameField.setTextMargins(3, 0, 3, 0)
+        self.excelFileNameField.setMinimumWidth(200)
+        self.excelFileNameField.setMaximumWidth(300)
+        self.excelFileNameField.setClearButtonEnabled(True)
+        self.excelFileNameField.setEnabled(False)
+
+        self.excelSheetNameLabel = QLabel('Excel Sheet Name')
+        self.selectSheetName = QComboBox()
+        self.selectSheetName.setContentsMargins(3, 0, 3, 0)
+        self.selectSheetName.setMinimumWidth(200)
+        self.selectSheetName.setMaximumWidth(300)
+        self.selectSheetName.currentTextChanged.connect(self.onSelectedSheetnameChanged)
+
+        self.latitudeColumnLabel = QLabel('Latitude Column')
+        self.selectLatitudeColumn = QComboBox()
+        self.selectLatitudeColumn.setContentsMargins(3, 0, 3, 0)
+        self.selectLatitudeColumn.setMinimumWidth(200)
+        self.selectLatitudeColumn.setMaximumWidth(300)
+
+        self.longitudeColumnLabel = QLabel('Longitude Column')
+        self.selectLongitudeColumn = QComboBox()
+        self.selectLongitudeColumn.setContentsMargins(3, 0, 3, 0)
+        self.selectLongitudeColumn.setMinimumWidth(200)
+        self.selectLongitudeColumn.setMaximumWidth(300)
+
+        self.processButton = QPushButton('Process File', self)
+        self.processButton.setMaximumWidth(100)
+        self.processButton.clicked.connect(lambda: self.process_button_click())
+
+        self.statusLabel = QLabel('')
+
+        formLayout.addRow(self.selectFileButton, self.excelFileNameField)
+        formLayout.addRow(self.excelSheetNameLabel, self.selectSheetName)
+        formLayout.addRow(self.latitudeColumnLabel, self.selectLatitudeColumn)
+        formLayout.addRow(self.longitudeColumnLabel, self.selectLongitudeColumn)
+        formLayout.addRow(self.processButton)
+        formLayout.addRow(self.statusLabel)
+
+        self.groupBox.setLayout(formLayout)
+        self._verticalLayout.addWidget(self.groupBox, alignment=Qt.AlignCenter)
+
+    def process_button_click(self):
         
-        excelSheetNameLabel = QLabel('Excel Sheet Name')
-        excelSheetNameField = QLineEdit(self)
-        excelSheetNameField.setTextMargins(3, 0, 3, 0)
-        excelSheetNameField.setMinimumWidth(200)
-        excelSheetNameField.setMaximumWidth(300)
-        excelSheetNameField.setClearButtonEnabled(True)
+        fileName = self.excelFileNameField.text()
+        sheetName = self.selectSheetName.currentText()
+        latitudeColumn = self.selectLatitudeColumn.currentText()
+        longitudeColumn = self.selectLongitudeColumn.currentText()
+        if fileName is not None and fileName != '' and sheetName is not None and sheetName != '' and latitudeColumn is not None and latitudeColumn != '' and longitudeColumn is not None and longitudeColumn != '': 
+            self.statusLabel.setText('Loading Please Wait...')
+            self.statusLabel.repaint()
+            try:
+                processExcelFile(fileName, sheetName, latitudeColumn, longitudeColumn)
+            except:
+                self.statusLabel.setText('Error Encountered while processing. Please check all inputs')
+                self.statusLabel.repaint()
+            self.statusLabel.setText('Processing Completed!')
+            self.statusLabel.repaint()
+        else:
+            self.statusLabel.setText('Error Encountered while processing. Please make sure all inputs are provided')
+            self.statusLabel.repaint()
 
-        processButton = QPushButton('Process File', self)
-        processButton.setMaximumWidth(100)
-        processButton.clicked.connect(lambda: self.process_button_click(excelFileNameField, excelSheetNameField))
+    def openFileNameDialog(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
+        if fileName:
+            self.excelFileNameField.setText(fileName)
+            wb = load_workbook(fileName, read_only=True, keep_links=False)
+            self.selectSheetName.addItems(wb.sheetnames)
 
-        submitLabel = QLabel('Open Your Vault')
-        submitField = QPushButton()
+    def onSelectedSheetnameChanged(self, sheetName):
+        self.selectLatitudeColumn.clear()
+        self.selectLongitudeColumn.clear()
+        fileName = self.excelFileNameField.text()
 
-        formLayout.addRow(excelFileNameLabel, excelFileNameField)
-        formLayout.addRow(excelSheetNameLabel, excelSheetNameField)
-        formLayout.addRow(processButton)
+        df = pd.read_excel(fileName, sheet_name=sheetName)
+        dataColumnNames = df.columns.tolist()
+        dataColumnNames.insert(0, 'Please Select And Item')
+        self.selectLatitudeColumn.addItems(dataColumnNames)
+        self.selectLongitudeColumn.addItems(dataColumnNames)
 
-        groupBox.setLayout(formLayout)
-        self._verticalLayout.addWidget(groupBox, alignment=Qt.AlignCenter)
+        for columnName in dataColumnNames:
+            
+            if re.search('latitude', columnName, re.IGNORECASE):
+                index = self.selectLatitudeColumn.findText(columnName, Qt.MatchFixedString)
+                if index >= 0:
+                    self.selectLatitudeColumn.setCurrentIndex(index)
+            
+            elif re.search('longitude', columnName, re.IGNORECASE):
+                index = self.selectLongitudeColumn.findText(columnName, Qt.MatchFixedString)
+                if index >= 0:
+                    self.selectLongitudeColumn.setCurrentIndex(index)
+        
 
-    def process_button_click(excelFileNameField, excelSheetNameField, self):
-        fileName = excelFileNameField.text()
-        sheetName = excelSheetNameField.text()
-        if fileName is not None and fileName != '' and fileName is not None and fileName != '':
-            processExcelFile(fileName, sheetName)
 
 
 if (__name__ == '__main__'):
